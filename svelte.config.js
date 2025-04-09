@@ -13,7 +13,7 @@ const config = {
 			strict: true
 		}),
 		paths: {
-			base: ''
+  			base: '/career-timeline'
 		}
 	}
 };
