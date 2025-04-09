@@ -120,7 +120,7 @@
   }
 
   h1 {
-    color: #ff3e00;
+    color: #3e84ff;
     font-size: 2.5em;
     margin-bottom: 0.5em;
   }
