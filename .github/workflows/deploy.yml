@@ -16,12 +16,17 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn build
       
-      # Debug step to see what's in the build directory
-      - name: List build directory contents
-        run: ls -la build
+      # Instruct github to no use jekyll, critical for correct MIME types
+      - name: Create .nojekyll file
+        run: touch build/.nojekyll
+      
+      # Enable use of custom domain
+      - name: Configure custom domain
+        run: echo "www.feikegeerts.nl" > build/CNAME
       
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build
+          cname: www.feikegeerts.nl
