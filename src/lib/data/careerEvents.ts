@@ -2,6 +2,20 @@ import type { CareerEvent } from '$lib/types';
 
 export const careerEvents: CareerEvent[] = [
   {
+    id: 7,
+    title: "Product Manager",
+    company: "Current Company",
+    period: "Mar 2022 - Present",
+    description: "Working as a Product Manager.",
+  },
+  {
+    id: 6,
+    title: "Product Manager",
+    company: "Current Company",
+    period: "Mar 2022 - Present",
+    description: "Working as a Product Manager.",
+  },
+  {
     id: 5,
     title: "Product Manager",
     company: "Current Company",

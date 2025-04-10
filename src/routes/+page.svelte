@@ -101,7 +101,6 @@
     {selectedEventId}
     onSelect={selectEvent}
     onClose={closeDetailedView}
-    showAllEvents={true}
   />
 </main>
 
@@ -120,7 +119,7 @@
   }
 
   h1 {
-    color: #3e84ff;
+    color: var(--primary);
     font-size: 2.5em;
     margin-bottom: 0.5em;
   }
