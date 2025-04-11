@@ -1,11 +1,26 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import type { CareerEvent } from "$lib/types";
+  
   export let event: CareerEvent;
   export let isSelected: boolean;
   export let position: number;
   export let selectedEventId: number | null;
   export let onSelect: (id: number) => void;
   export let onClose: () => void;
+  export let elementRef: Map<number, HTMLElement>;
+  
+  let element: HTMLElement;
+  
+  onMount(() => {
+    if (element) {
+      elementRef.set(event.id, element);
+    }
+    
+    return () => {
+      elementRef.delete(event.id);
+    };
+  });
 </script>
 
 <div
@@ -16,6 +31,7 @@
   tabindex={selectedEventId === null || Math.abs(position) <= 1 ? 0 : -1}
   role="button"
   aria-label="View details for {event.title} at {event.company}"
+  bind:this={element}
 >
   <div class="timeline-content">
     <div class="timeline-date">{event.period}</div>
@@ -41,7 +57,7 @@
     --dot-position: 41px;
     --highlight-color: 62, 132, 255;
     --highlight-shadow: rgba(var(--highlight-color), 0.8);
-    --transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+    --transition: all 1s cubic-bezier(0.19, 1, 0.22, 1);
     
     position: relative;
     transition: var(--transition);
@@ -64,7 +80,6 @@
     background-color: var(--background);
     transition: var(--transition);
     box-shadow: 0 0 0 0 var(--highlight-shadow);
-    transform: scale(1);
     transform-origin: center;
     will-change: width, height, left, top, background-color, border-color, transform, box-shadow;
   }
@@ -124,7 +139,6 @@
     top: 23px;
     background-color: var(--primary);
     border-color: var(--background);
-    transform: scale(1.2);
     box-shadow: 0 0 0 8px rgba(62, 132, 255, 0.3);
     animation: pulse 2s infinite;
   }

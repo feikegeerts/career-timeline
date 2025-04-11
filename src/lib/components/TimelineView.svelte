@@ -1,10 +1,26 @@
 <script lang="ts">
   import type { CareerEvent } from "$lib/types";
   import TimelineItem from "$lib/components/TimelineItem.svelte";
+  import { onMount } from "svelte";
+  
   export let careerEvents: CareerEvent[];
   export let selectedEventId: number | null = null;
   export let onSelect: (id: number) => void;
   export let onClose: () => void;
+  
+  let timelineItemRefs = new Map();
+  
+  export function scrollSelectedIntoView() {
+    if (selectedEventId === null) return;
+    
+    const selectedElement = timelineItemRefs.get(selectedEventId);
+    if (selectedElement) {
+      selectedElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  }
 </script>
 
 <div class="timeline-container">
@@ -25,6 +41,7 @@
       {selectedEventId}
       {onSelect}
       {onClose}
+      bind:elementRef={timelineItemRefs}
     />
   {/each}
 </div>

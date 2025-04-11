@@ -5,9 +5,13 @@
 
   let selectedEventId: number | null = null;
   let isTransitioning = false;
+  let timelineViewComponent: TimelineView;
 
   function selectEvent(id: number): void {
     selectedEventId = id;
+    setTimeout(() => {
+      timelineViewComponent.scrollSelectedIntoView();
+    }, 10);
   }
 
   function closeDetailedView(): void {
@@ -16,9 +20,11 @@
 
   function goToNextEvent(): void {
     if (selectedEventId === null) {
-      // If no event is selected, select the first one
       if (careerEvents.length > 0) {
         selectedEventId = careerEvents[0].id;
+        setTimeout(() => {
+          timelineViewComponent.scrollSelectedIntoView();
+        }, 10);
       }
       return;
     }
@@ -28,14 +34,19 @@
     );
     if (currentIndex < careerEvents.length - 1) {
       selectedEventId = careerEvents[currentIndex + 1].id;
+      setTimeout(() => {
+        timelineViewComponent.scrollSelectedIntoView();
+      }, 10);
     }
   }
 
   function goToPreviousEvent(): void {
     if (selectedEventId === null) {
-      // If no event is selected, select the last one
       if (careerEvents.length > 0) {
         selectedEventId = careerEvents[careerEvents.length - 1].id;
+        setTimeout(() => {
+          timelineViewComponent.scrollSelectedIntoView();
+        }, 10);
       }
       return;
     }
@@ -45,6 +56,9 @@
     );
     if (currentIndex > 0) {
       selectedEventId = careerEvents[currentIndex - 1].id;
+      setTimeout(() => {
+        timelineViewComponent.scrollSelectedIntoView();
+      }, 10);
     }
   }
 
@@ -64,14 +78,25 @@
     }
   }
 
+  let wheelAccumulator = 0;
+  const WHEEL_THRESHOLD = 50;
+  
   function handleWheel(event: WheelEvent): void {
+    event.preventDefault();
+    
+    wheelAccumulator += Math.abs(event.deltaY);
+    
+    if (wheelAccumulator < WHEEL_THRESHOLD) return;
+    
+    wheelAccumulator = 0;
+    
     // Throttle to prevent too rapid navigation
     if (isTransitioning) return;
 
     isTransitioning = true;
     setTimeout(() => {
       isTransitioning = false;
-    }, 300);
+    }, 500); 
 
     if (event.deltaY > 0) {
       goToNextEvent();
@@ -82,8 +107,7 @@
 
   onMount(() => {
     window.addEventListener("keydown", handleKeydown);
-    window.addEventListener("wheel", handleWheel);
-
+    window.addEventListener("wheel", handleWheel, { passive: false });
     return () => {
       window.removeEventListener("keydown", handleKeydown);
       window.removeEventListener("wheel", handleWheel);
@@ -101,6 +125,7 @@
     {selectedEventId}
     onSelect={selectEvent}
     onClose={closeDetailedView}
+    bind:this={timelineViewComponent}
   />
 </main>
 
