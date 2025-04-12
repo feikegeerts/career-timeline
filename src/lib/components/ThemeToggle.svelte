@@ -33,7 +33,6 @@
     </svg>
   {/if}
 </button>
-
 <style>
   .theme-toggle {
     background: var(--surface);
@@ -55,6 +54,31 @@
   }
   
   .theme-toggle:hover {
+    transform: scale(1.05);
+    background: var(--primary);
+    color: white;
+  }
+
+  .github-button {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: fixed;
+    bottom: 80px; /* Adjusted to stack above the theme toggle */
+    right: 20px;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .github-button:hover {
     transform: scale(1.05);
     background: var(--primary);
     color: white;

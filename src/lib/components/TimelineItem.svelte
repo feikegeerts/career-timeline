@@ -235,15 +235,35 @@
 
   @media (max-width: 640px) {
     .timeline-item {
-      padding-left: 50px;
+      padding-left: 30px;
+      margin-bottom: 1.5em;
     }
 
     .timeline-item::before {
-      left: 12px;
+      left: 8px;
+      top: 20px;
+      width: 12px;
+      height: 12px;
     }
 
-    .timeline-item.selected::before {
-      left: 10px;
+    .timeline-content {
+      padding: 1.2em;
+    }
+
+    .timeline-date {
+      font-size: 0.8em;
+    }
+
+    h2 {
+      font-size: 1.2em;
+    }
+
+    h3 {
+      font-size: 0.9em;
+    }
+
+    .event-description {
+      font-size: 0.9em;
     }
   }
 </style>
