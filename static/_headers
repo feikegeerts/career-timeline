@@ -1,2 +1,6 @@
 /*._app/immutable/**/*.js
   Content-Type: application/javascript
+
+/*
+  /index.html 200
+  /404.html 404
