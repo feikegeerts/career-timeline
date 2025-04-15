@@ -56,6 +56,21 @@ Resources:
           const s3Client = new S3Client();
 
           exports.handler = async (event) => {
+            console.log('Event received:', JSON.stringify(event));
+            
+            // Handle OPTIONS preflight request
+            if (event.httpMethod === 'OPTIONS') {
+              return {
+                statusCode: 200,
+                headers: {
+                  'Access-Control-Allow-Origin': '*',
+                  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key',
+                  'Access-Control-Allow-Methods': 'GET,OPTIONS',
+                  'Access-Control-Max-Age': '86400',
+                }
+              };
+            }
+            
             try {
               // Get bucket and key from environment variables
               const bucketName = process.env.BUCKET_NAME;
@@ -87,51 +102,31 @@ Resources:
               
               console.log('Successfully retrieved and parsed data');
               
-              // Extract origin from request for proper CORS handling
-              const origin = event.headers && (event.headers.origin || event.headers.Origin);
-              const allowedOrigins = [
-                'https://feikegeerts.nl', 
-                'https://www.feikegeerts.nl'
-              ];
-              
-              // Set CORS origin dynamically if it matches allowed origins, or fall back to configured origin
-              const corsOrigin = (origin && allowedOrigins.includes(origin)) 
-                ? origin 
-                : process.env.CORS_ORIGIN;
-              
-              // Return the data with proper headers
+              // Return the data with permissive CORS headers
               return {
                 statusCode: 200,
                 headers: {
                   'Content-Type': 'application/json',
-                  'Access-Control-Allow-Origin': corsOrigin,
+                  'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key',
                   'Access-Control-Allow-Methods': 'GET,OPTIONS',
-                  'Access-Control-Max-Age': '86400'
+                  'Access-Control-Max-Age': '86400',
+                  'Vary': 'Origin'
                 },
                 body: JSON.stringify(careerData)
               };
             } catch (error) {
               console.error('Error:', error);
               
-              // Extract origin from request for proper CORS handling (also in error case)
-              const origin = event.headers && (event.headers.origin || event.headers.Origin);
-              const allowedOrigins = [
-                'https://feikegeerts.nl', 
-                'https://www.feikegeerts.nl'
-              ];
-              const corsOrigin = (origin && allowedOrigins.includes(origin)) 
-                ? origin 
-                : process.env.CORS_ORIGIN;
-              
               return {
                 statusCode: 500,
                 headers: {
                   'Content-Type': 'application/json',
-                  'Access-Control-Allow-Origin': corsOrigin,
+                  'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key',
                   'Access-Control-Allow-Methods': 'GET,OPTIONS',
-                  'Access-Control-Max-Age': '86400'
+                  'Access-Control-Max-Age': '86400',
+                  'Vary': 'Origin'
                 },
                 body: JSON.stringify({ error: 'Failed to retrieve career data: ' + error.message })
               };
