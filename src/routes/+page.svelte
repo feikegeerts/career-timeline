@@ -16,6 +16,8 @@
   async function fetchCareerEvents() {
     try {
       const fetchUrl = isDev ? '/api-proxy' : apiUrl;
+      console.log(`Fetching from: ${fetchUrl}`);
+      
       const response = await fetch(fetchUrl, {
         headers: {
           'x-api-key': apiKey,
@@ -23,7 +25,8 @@
           'Content-Type': 'application/json'
         },
         mode: 'cors',
-        credentials: 'omit' // Changed from 'same-origin' to 'omit'
+        credentials: 'omit',
+        cache: 'no-cache'
       });
 
       if (!response.ok) {
@@ -32,6 +35,7 @@
       
       const data = await response.json();
       careerEvents = data.careerEvents;
+      console.log("Successfully loaded career events");
     } catch (err: unknown) {
       console.error("API Error:", err);
       error = err instanceof Error ? err.message : 'An unknown error occurred fetching career events';

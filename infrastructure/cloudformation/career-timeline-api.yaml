@@ -9,7 +9,7 @@ Parameters:
 
   CorsOrigin:
     Type: String
-    Default: '*'
+    Default: 'https://feikegeerts.nl'
     Description: CORS allowed origins (your domain)
 
   LambdaExecutionRoleArn:
@@ -92,7 +92,7 @@ Resources:
                 statusCode: 200,
                 headers: {
                   'Content-Type': 'application/json',
-                  'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || '*',
+                  'Access-Control-Allow-Origin': process.env.CORS_ORIGIN,
                   'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key',
                   'Access-Control-Allow-Methods': 'GET,OPTIONS',
                   'Access-Control-Max-Age': '86400'
@@ -105,7 +105,7 @@ Resources:
                 statusCode: 500,
                 headers: {
                   'Content-Type': 'application/json',
-                  'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || '*',
+                  'Access-Control-Allow-Origin': process.env.CORS_ORIGIN,
                   'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key',
                   'Access-Control-Allow-Methods': 'GET,OPTIONS',
                   'Access-Control-Max-Age': '86400'
@@ -152,7 +152,7 @@ Resources:
         IntegrationResponses:
           - StatusCode: '200'
             ResponseParameters:
-              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Origin: "'https://feikegeerts.nl'"
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key'"
               method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
               method.response.header.Access-Control-Max-Age: "'86400'"
@@ -182,7 +182,7 @@ Resources:
         IntegrationResponses:
           - StatusCode: '200'
             ResponseParameters:
-              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Origin: "'https://feikegeerts.nl'"
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key'"
               method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
               method.response.header.Access-Control-Max-Age: "'86400'"
