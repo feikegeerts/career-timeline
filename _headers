@@ -4,3 +4,7 @@
 /*
   /index.html 200
   /404.html 404
+  Access-Control-Allow-Origin: https://feikegeerts.nl
+  Access-Control-Allow-Methods: GET, POST, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, X-Amz-Date, Authorization, X-Api-Key, x-api-key
+  Access-Control-Max-Age: 86400
