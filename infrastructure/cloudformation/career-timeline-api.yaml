@@ -1,0 +1,242 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Career Timeline API with S3 Data Store'
+
+Parameters:
+  ApiStageName:
+    Type: String
+    Default: prod
+    Description: API Gateway deployment stage name
+
+  CorsOrigin:
+    Type: String
+    Default: '*'
+    Description: CORS allowed origins (your domain)
+
+Resources:
+  # S3 Bucket for storing the career data
+  CareerDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'career-timeline-data-${AWS::AccountId}'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # Lambda function that retrieves data from S3
+  CareerDataFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: GetCareerTimelineData
+      Runtime: nodejs18.x
+      Handler: index.handler
+      MemorySize: 128
+      Timeout: 10
+      Role: !GetAtt CareerDataLambdaRole.Arn
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref CareerDataBucket
+          DATA_FILE_KEY: 'careerEvents.json'
+          CORS_ORIGIN: !Ref CorsOrigin
+      Code:
+        ZipFile: |
+          const AWS = require('aws-sdk');
+          const s3 = new AWS.S3();
+
+          exports.handler = async (event) => {
+            try {
+              // Get bucket and key from environment variables
+              const bucketName = process.env.BUCKET_NAME;
+              const key = process.env.DATA_FILE_KEY;
+              
+              // Get the JSON file from S3
+              const data = await s3.getObject({
+                Bucket: bucketName,
+                Key: key
+              }).promise();
+              
+              // Parse the JSON content
+              const careerData = JSON.parse(data.Body.toString('utf-8'));
+              
+              // Return the data with proper headers
+              return {
+                statusCode: 200,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || '*',
+                  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key',
+                  'Access-Control-Allow-Methods': 'GET,OPTIONS'
+                },
+                body: JSON.stringify(careerData)
+              };
+            } catch (error) {
+              console.error('Error:', error);
+              return {
+                statusCode: 500,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || '*'
+                },
+                body: JSON.stringify({ error: 'Failed to retrieve career data' })
+              };
+            }
+          };
+
+  # IAM Role for Lambda function
+  CareerDataLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: S3ReadAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub 'arn:aws:s3:::${CareerDataBucket}/*'
+
+  # API Gateway for exposing the Lambda function
+  CareerTimelineApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: CareerTimelineAPI
+      Description: API for serving career timeline data
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # API Gateway Resource
+  CareerEventsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref CareerTimelineApi
+      ParentId: !GetAtt CareerTimelineApi.RootResourceId
+      PathPart: 'career-events'
+
+  # API Gateway Method
+  CareerEventsGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref CareerTimelineApi
+      ResourceId: !Ref CareerEventsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CareerDataFunction.Arn}/invocations'
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseModels:
+            application/json: 'Empty'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+
+  # API Gateway OPTIONS Method for CORS
+  CareerEventsOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref CareerTimelineApi
+      ResourceId: !Ref CareerEventsResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: !Sub "'${CorsOrigin}'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+
+  # Lambda Permission for API Gateway
+  CareerDataFunctionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref CareerDataFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${CareerTimelineApi}/*/*/*'
+
+  # API Deployment
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - CareerEventsGetMethod
+      - CareerEventsOptionsMethod
+    Properties:
+      RestApiId: !Ref CareerTimelineApi
+      StageName: !Ref ApiStageName
+
+  # API Usage Plan
+  ApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      ApiStages:
+        - ApiId: !Ref CareerTimelineApi
+          Stage: !Ref ApiStageName
+      Description: Usage plan for Career Timeline API
+      Quota:
+        Limit: 1000
+        Period: DAY
+      Throttle:
+        RateLimit: 10
+        BurstLimit: 20
+
+  # API Key
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Name: CareerTimelineApiKey
+      Description: API Key for Career Timeline API
+      Enabled: true
+
+  # API Key Usage Plan
+  ApiKeyUsagePlan:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref ApiUsagePlan
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${CareerTimelineApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiStageName}/career-events'
+
+  ApiKey:
+    Description: API Key (will only be shown once)
+    Value: !Ref ApiKey
+
+  S3BucketName:
+    Description: S3 Bucket for storing career data
+    Value: !Ref CareerDataBucket

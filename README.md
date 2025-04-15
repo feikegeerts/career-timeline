@@ -3,6 +3,7 @@
 A comprehensive career timeline web application built with Svelte.
 
 ## Table of Contents
+
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
 - [Getting Started](#getting-started)
@@ -44,7 +45,7 @@ Clone the repository and install dependencies:
 
 ```bash
 # Clone the repository
-git clone https://github.com/[your-username]/career-timeline.git
+git clone https://github.com/feikegeerts/career-timeline.git
 cd career-timeline
 
 # Install dependencies

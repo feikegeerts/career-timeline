@@ -120,7 +120,6 @@
     <h1>My Career Timeline</h1>
     <p>A chronological journey through my professional experience</p>
   </header>
-  <a href="/about">Go to About Page</a>
   <TimelineView
     {careerEvents}
     {selectedEventId}

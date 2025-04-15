@@ -1,0 +1,97 @@
+name: Deploy AWS Infrastructure
+
+on:
+  workflow_dispatch: # Allows manual triggering
+  push:
+    branches: [main]
+    paths:
+      - 'infrastructure/cloudformation/**'
+      - 'data/careerEvents.json'
+      - '.github/workflows/deploy-infrastructure.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy CloudFormation stack
+        id: deploy-stack
+        run: |
+          # Check if stack exists
+          if aws cloudformation describe-stacks --stack-name career-timeline-api 2>&1 | grep -q "Stack with id career-timeline-api does not exist"; then
+            echo "Creating new stack..."
+            aws cloudformation create-stack \
+              --stack-name career-timeline-api \
+              --template-body file://infrastructure/cloudformation/career-timeline-api.yaml \
+              --capabilities CAPABILITY_IAM \
+              --parameters ParameterKey=CorsOrigin,ParameterValue=https://feikegeerts.nl
+            
+            # Wait for stack creation to complete
+            aws cloudformation wait stack-create-complete --stack-name career-timeline-api
+          else
+            echo "Updating existing stack..."
+            aws cloudformation update-stack \
+              --stack-name career-timeline-api \
+              --template-body file://infrastructure/cloudformation/career-timeline-api.yaml \
+              --capabilities CAPABILITY_IAM \
+              --parameters ParameterKey=CorsOrigin,ParameterValue=https://feikegeerts.nl || echo "No updates to be performed"
+            
+            # Only wait if an update was started
+            if [ $? -eq 0 ]; then
+              aws cloudformation wait stack-update-complete --stack-name career-timeline-api
+            fi
+          fi
+
+          # Get stack outputs
+          aws cloudformation describe-stacks \
+            --stack-name career-timeline-api \
+            --query "Stacks[0].Outputs" > stack-outputs.json
+
+          # Extract needed values
+          S3_BUCKET=$(cat stack-outputs.json | jq -r '.[] | select(.OutputKey=="S3BucketName") | .OutputValue')
+          API_ENDPOINT=$(cat stack-outputs.json | jq -r '.[] | select(.OutputKey=="ApiEndpoint") | .OutputValue')
+          API_KEY=$(cat stack-outputs.json | jq -r '.[] | select(.OutputKey=="ApiKey") | .OutputValue')
+
+          # Set outputs for use in other steps
+          echo "s3_bucket=$S3_BUCKET" >> $GITHUB_OUTPUT
+          echo "api_endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
+
+          # Store API key as a secret
+          if [ ! -z "$API_KEY" ]; then
+            echo "api_key=$API_KEY" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload career data to S3
+        run: |
+          aws s3 cp data/careerEvents.json s3://${{ steps.deploy-stack.outputs.s3_bucket }}/careerEvents.json
+
+      - name: Update API details
+        run: |
+          # Create or update .env.local file with API details
+          echo "VITE_API_URL=${{ steps.deploy-stack.outputs.api_endpoint }}" > .env.local
+          echo "VITE_API_KEY=${{ steps.deploy-stack.outputs.api_key }}" >> .env.local
+
+          # Optional: Save API details as secrets for future use
+          # Note: This requires additional permissions for GitHub Actions
+          # gh secret set VITE_API_URL --body "${{ steps.deploy-stack.outputs.api_endpoint }}"
+          # gh secret set VITE_API_KEY --body "${{ steps.deploy-stack.outputs.api_key }}"
+
+      - name: Output information
+        run: |
+          echo "✅ Infrastructure deployment complete!"
+          echo "🔗 API Endpoint: ${{ steps.deploy-stack.outputs.api_endpoint }}"
+          echo "🗄️ S3 Bucket: ${{ steps.deploy-stack.outputs.s3_bucket }}"
+          echo "🔑 API Key has been stored (check workflow outputs)"
+
+          # Important note about the API key
+          echo "⚠️ IMPORTANT: Store your API key securely. It's only shown once after creation."
