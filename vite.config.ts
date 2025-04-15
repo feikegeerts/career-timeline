@@ -1,18 +1,19 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env files
+dotenv.config({ path: '.env.local' });
 
 export default defineConfig({
   plugins: [sveltekit()],
   server: {
-    fs: {
-      allow: ['..'],
-    },
-  },
-  build: {
-    rollupOptions: {
-      input: {
-        main: 'src/app.html',
-        fallback: '404.html',
+    proxy: {
+      // Proxy requests to your API during development
+      '/api-proxy': {
+        target: process.env.VITE_PUBLIC_API_URL || 'https://feikgeerts.nl',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api-proxy/, ''),
       },
     },
   },

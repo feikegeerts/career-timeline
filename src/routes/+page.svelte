@@ -1,22 +1,22 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import TimelineView from "$lib/components/TimelineView.svelte";
-  // Replace SvelteKit env import with direct access to Vite env variables
-  // import { PUBLIC_API_URL, PUBLIC_API_KEY } from '$env/static/public';
+  import type { CareerEvent } from "$lib/types";
 
   let selectedEventId: number | null = null;
   let isTransitioning = false;
   let timelineViewComponent: TimelineView;
-  let careerEvents = [];
+  let careerEvents: CareerEvent[] = [];
   let error: string | null = null;
 
-  // Access Vite environment variables
   const apiUrl = import.meta.env.VITE_PUBLIC_API_URL;
   const apiKey = import.meta.env.VITE_PUBLIC_API_KEY;
+  const isDev = import.meta.env.DEV;
 
   async function fetchCareerEvents() {
     try {
-      const response = await fetch(apiUrl, {
+      const fetchUrl = isDev ? '/api-proxy' : apiUrl;
+      const response = await fetch(fetchUrl, {
         headers: {
           'x-api-key': apiKey
         }
@@ -26,9 +26,11 @@
         throw new Error(`Failed to fetch: ${response.statusText}`);
       }
 
-      careerEvents = await response.json();
-    } catch (err) {
-      error = err.message;
+      
+      const data = await response.json();
+      careerEvents = data.careerEvents
+    } catch (err: unknown) {
+      error = err instanceof Error ? err.message : 'An unknown error occurred';
     }
   }
 
