@@ -61,6 +61,8 @@ Resources:
               const bucketName = process.env.BUCKET_NAME;
               const key = process.env.DATA_FILE_KEY;
               
+              console.log(`Attempting to get object from bucket: ${bucketName}, key: ${key}`);
+              
               // Get the JSON file from S3
               const command = new GetObjectCommand({
                 Bucket: bucketName,
@@ -68,18 +70,22 @@ Resources:
               });
               
               const response = await s3Client.send(command);
-              const streamToString = (stream) =>
-                new Promise((resolve, reject) => {
-                  const chunks = [];
-                  stream.on('data', (chunk) => chunks.push(chunk));
-                  stream.on('error', reject);
-                  stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
-                });
               
-              const bodyContents = await streamToString(response.Body);
+              if (!response.Body) {
+                throw new Error('Response body is undefined');
+              }
+              
+              // For AWS SDK v3, response.Body is a readable stream
+              // Convert stream to string
+              let bodyContents = '';
+              
+              // Use the built-in transformToString method instead of custom stream handling
+              bodyContents = await response.Body.transformToString();
               
               // Parse the JSON content
               const careerData = JSON.parse(bodyContents);
+              
+              console.log('Successfully retrieved and parsed data');
               
               // Return the data with proper headers
               return {
@@ -100,7 +106,7 @@ Resources:
                   'Content-Type': 'application/json',
                   'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || '*'
                 },
-                body: JSON.stringify({ error: 'Failed to retrieve career data' })
+                body: JSON.stringify({ error: 'Failed to retrieve career data: ' + error.message })
               };
             }
           };

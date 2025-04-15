@@ -14,12 +14,18 @@ jobs:
           node-version: 18
           cache: yarn
       - run: yarn install --frozen-lockfile
-      - run: yarn build
-      
+
+      # Pass API secrets to the build process
+      - name: Build
+        run: yarn build
+        env:
+          VITE_PUBLIC_API_URL: ${{ secrets.API_URL }}
+          VITE_PUBLIC_API_KEY: ${{ secrets.API_KEY }}
+
       # Enable use of custom domain
       - name: Configure custom domain
         run: echo "feikegeerts.nl" > build/CNAME
-      
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:

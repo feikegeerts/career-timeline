@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import TimelineView from "$lib/components/TimelineView.svelte";
-  import { PUBLIC_API_URL, PUBLIC_API_KEY } from '$env/static/public';
+  // Replace SvelteKit env import with direct access to Vite env variables
+  // import { PUBLIC_API_URL, PUBLIC_API_KEY } from '$env/static/public';
 
   let selectedEventId: number | null = null;
   let isTransitioning = false;
@@ -9,11 +10,15 @@
   let careerEvents = [];
   let error: string | null = null;
 
+  // Access Vite environment variables
+  const apiUrl = import.meta.env.VITE_PUBLIC_API_URL;
+  const apiKey = import.meta.env.VITE_PUBLIC_API_KEY;
+
   async function fetchCareerEvents() {
     try {
-      const response = await fetch(`${PUBLIC_API_URL}`, {
+      const response = await fetch(apiUrl, {
         headers: {
-          'x-api-key': PUBLIC_API_KEY
+          'x-api-key': apiKey
         }
       });
 
