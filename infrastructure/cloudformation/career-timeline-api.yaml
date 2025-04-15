@@ -15,7 +15,7 @@ Parameters:
   LambdaExecutionRoleArn:
     Type: String
     Description: ARN of the IAM role for Lambda execution
-    Default: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CareerTimelineDataRole'
+    Default: 'arn:aws:iam::${AWS::AccountId}:role/CareerTimelineDataRole'
 
 Resources:
   # S3 Bucket for storing the career data
