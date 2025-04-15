@@ -211,6 +211,8 @@ Resources:
       Throttle:
         RateLimit: 10
         BurstLimit: 20
+      DependsOn:
+        - ApiDeployment
 
   # API Key
   ApiKey:
