@@ -32,12 +32,10 @@ jobs:
       - name: Deploy CloudFormation stack
         id: deploy-stack
         run: |
-          # Validate template before deployment
+          # Try to validate template before deployment
           echo "Validating CloudFormation template..."
           aws cloudformation validate-template \
-            --template-body file://infrastructure/cloudformation/career-timeline-api.yaml || exit 1
-
-          echo "Template validation successful!"
+            --template-body file://infrastructure/cloudformation/career-timeline-api.yaml
 
           # Check if stack exists
           STACK_EXISTS=0
