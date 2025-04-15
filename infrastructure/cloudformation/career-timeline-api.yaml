@@ -39,7 +39,7 @@ Resources:
       Handler: index.handler
       MemorySize: 128
       Timeout: 10
-      Role: !GetAtt CareerDataLambdaRole.Arn
+      Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CareerTimelineDataRole' # Reference to pre-created role
       Environment:
         Variables:
           BUCKET_NAME: !Ref CareerDataBucket
@@ -88,29 +88,6 @@ Resources:
               };
             }
           };
-
-  # IAM Role for Lambda function
-  CareerDataLambdaRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        - PolicyName: S3ReadAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                Resource: !Sub 'arn:aws:s3:::${CareerDataBucket}/*'
 
   # API Gateway for exposing the Lambda function
   CareerTimelineApi:
