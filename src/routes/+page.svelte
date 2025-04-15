@@ -1,12 +1,28 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { careerEvents } from "$lib/data/careerEvents";
   import TimelineView from "$lib/components/TimelineView.svelte";
 
   let selectedEventId: number | null = null;
   let isTransitioning = false;
   let timelineViewComponent: TimelineView;
 
+  const careerEvents = [
+    {
+      id: 1,
+      title: "Software Engineer",
+      company: "Tech Company",
+      period: "Jan 2020 - Present",
+      description: "Developing web applications using modern frameworks.",
+    },
+    {
+      id: 2,
+      title: "Intern",
+      company: "Another Tech Company",
+      period: "Jun 2019 - Dec 2019",
+      description: "Assisted in developing internal tools and applications.",
+    },
+    // Add more events as needed
+  ];
   function selectEvent(id: number): void {
     selectedEventId = id;
     setTimeout(() => {
