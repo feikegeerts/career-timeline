@@ -18,19 +18,23 @@
       const fetchUrl = isDev ? '/api-proxy' : apiUrl;
       const response = await fetch(fetchUrl, {
         headers: {
-          'x-api-key': apiKey
-        }
+          'x-api-key': apiKey,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        mode: 'cors',
+        credentials: 'omit' // Changed from 'same-origin' to 'omit'
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.statusText}`);
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
       }
-
       
       const data = await response.json();
-      careerEvents = data.careerEvents
+      careerEvents = data.careerEvents;
     } catch (err: unknown) {
-      error = err instanceof Error ? err.message : 'An unknown error occurred';
+      console.error("API Error:", err);
+      error = err instanceof Error ? err.message : 'An unknown error occurred fetching career events';
     }
   }
 
@@ -186,5 +190,10 @@
   .error {
     color: red;
     text-align: center;
+    padding: 1em;
+    background-color: #ffeeee;
+    border-radius: 4px;
+    max-width: 600px;
+    margin: 2em auto;
   }
 </style>
