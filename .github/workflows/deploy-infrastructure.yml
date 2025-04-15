@@ -24,35 +24,82 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Install AWS CLI tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
       - name: Deploy CloudFormation stack
         id: deploy-stack
         run: |
+          # Validate template before deployment
+          echo "Validating CloudFormation template..."
+          aws cloudformation validate-template \
+            --template-body file://infrastructure/cloudformation/career-timeline-api.yaml || exit 1
+
+          echo "Template validation successful!"
+
           # Check if stack exists
-          if aws cloudformation describe-stacks --stack-name career-timeline-api 2>&1 | grep -q "Stack with id career-timeline-api does not exist"; then
-            echo "Creating new stack..."
+          STACK_EXISTS=0
+          aws cloudformation describe-stacks --stack-name career-timeline-api &>/dev/null && STACK_EXISTS=1 || echo "Stack does not exist yet"
+
+          if [ $STACK_EXISTS -eq 0 ]; then
+            echo "Creating new stack career-timeline-api..."
             aws cloudformation create-stack \
               --stack-name career-timeline-api \
               --template-body file://infrastructure/cloudformation/career-timeline-api.yaml \
-              --capabilities CAPABILITY_IAM \
-              --parameters ParameterKey=CorsOrigin,ParameterValue=https://feikegeerts.nl
+              --parameters \
+                ParameterKey=CorsOrigin,ParameterValue=https://feikegeerts.nl \
+                ParameterKey=LambdaExecutionRoleArn,ParameterValue=arn:aws:iam::526811500691:role/CareerTimelineDataRole
             
-            # Wait for stack creation to complete
+            echo "Waiting for stack creation to complete (this may take several minutes)..."
             aws cloudformation wait stack-create-complete --stack-name career-timeline-api
+            
+            if [ $? -ne 0 ]; then
+              echo "❌ Stack creation failed. Checking events..."
+              aws cloudformation describe-stack-events \
+                --stack-name career-timeline-api \
+                --query "StackEvents[?ResourceStatus=='CREATE_FAILED'].ResourceStatusReason" \
+                --output text
+              exit 1
+            fi
+            
+            echo "✅ Stack creation completed successfully!"
           else
-            echo "Updating existing stack..."
+            echo "Updating existing stack career-timeline-api..."
+            set +e
             aws cloudformation update-stack \
               --stack-name career-timeline-api \
               --template-body file://infrastructure/cloudformation/career-timeline-api.yaml \
-              --capabilities CAPABILITY_IAM \
-              --parameters ParameterKey=CorsOrigin,ParameterValue=https://feikegeerts.nl || echo "No updates to be performed"
+              --parameters \
+                ParameterKey=CorsOrigin,ParameterValue=https://feikegeerts.nl \
+                ParameterKey=LambdaExecutionRoleArn,ParameterValue=arn:aws:iam::526811500691:role/CareerTimelineDataRole
             
-            # Only wait if an update was started
-            if [ $? -eq 0 ]; then
+            UPDATE_RESULT=$?
+            set -e
+            
+            # If there are actual updates to perform
+            if [ $UPDATE_RESULT -eq 0 ]; then
+              echo "Waiting for stack update to complete (this may take several minutes)..."
               aws cloudformation wait stack-update-complete --stack-name career-timeline-api
+              
+              if [ $? -ne 0 ]; then
+                echo "❌ Stack update failed. Checking events..."
+                aws cloudformation describe-stack-events \
+                  --stack-name career-timeline-api \
+                  --query "StackEvents[?ResourceStatus=='UPDATE_FAILED'].ResourceStatusReason" \
+                  --output text
+                exit 1
+              fi
+              
+              echo "✅ Stack update completed successfully!"
+            else
+              echo "No updates were performed (the submitted template was identical to the current template)"
             fi
           fi
 
           # Get stack outputs
+          echo "Retrieving stack outputs..."
           aws cloudformation describe-stacks \
             --stack-name career-timeline-api \
             --query "Stacks[0].Outputs" > stack-outputs.json
@@ -64,18 +111,10 @@ jobs:
           # Extract API key (sensitive) and store as a GitHub secret
           API_KEY=$(cat stack-outputs.json | jq -r '.[] | select(.OutputKey=="ApiKey") | .OutputValue')
           if [ ! -z "$API_KEY" ]; then
-            # Use GitHub CLI to set the secret securely, if CLI is available
-            if command -v gh &> /dev/null && [ ! -z "${{ secrets.GITHUB_TOKEN }}" ]; then
-              echo "::add-mask::$API_KEY"
-              echo "Setting API_KEY as a repository secret... (output masked)"
-              echo $API_KEY | gh secret set API_KEY --repo $GITHUB_REPOSITORY
-              echo "API key has been stored as a repository secret"
-            else
-              # Mask the value in logs but warn that manual action is required
-              echo "::add-mask::$API_KEY"
-              echo "⚠️ IMPORTANT: Please manually add this API key as a GitHub secret named 'API_KEY'"
-              echo "The key value is masked in the logs for security"
-            fi
+            # Mask the value in logs
+            echo "::add-mask::$API_KEY"
+            echo "⚠️ IMPORTANT: Please manually add this API key as a GitHub secret named 'API_KEY'"
+            echo "The key value is masked in the logs for security"
           fi
 
           # Set non-sensitive outputs for use in other steps
@@ -84,31 +123,13 @@ jobs:
 
       - name: Upload career data to S3
         run: |
+          echo "Uploading career data to S3 bucket ${{ steps.deploy-stack.outputs.s3_bucket }}..."
           aws s3 cp data/careerEvents.json s3://${{ steps.deploy-stack.outputs.s3_bucket }}/careerEvents.json
-
-      - name: Update API details safely
-        run: |
-          # Create or update .env.local file with API endpoint (non-sensitive)
-          echo "VITE_API_URL=${{ steps.deploy-stack.outputs.api_endpoint }}" > .env.local
-
-          # Use the API key from GitHub secrets if available, otherwise leave a placeholder
-          if [ ! -z "${{ secrets.API_KEY }}" ]; then
-            echo "VITE_API_KEY=${{ secrets.API_KEY }}" >> .env.local
-            echo "Added API key from repository secrets to .env.local"
-          else
-            echo "VITE_API_KEY=PLACEHOLDER_REPLACE_WITH_ACTUAL_KEY" >> .env.local
-            echo "⚠️ WARNING: Please replace the placeholder API key in .env.local with the actual key"
-          fi
-
-          # Ensure .env.local is in .gitignore to prevent accidental commits
-          if ! grep -q ".env.local" .gitignore 2>/dev/null; then
-            echo ".env.local" >> .gitignore
-            echo "Added .env.local to .gitignore for security"
-          fi
+          echo "✅ Data upload complete!"
 
       - name: Output information
         run: |
           echo "✅ Infrastructure deployment complete!"
           echo "🔗 API Endpoint: ${{ steps.deploy-stack.outputs.api_endpoint }}"
           echo "🗄️ S3 Bucket: ${{ steps.deploy-stack.outputs.s3_bucket }}"
-          echo "🛡️ Security note: API Key has been masked in logs and stored securely"
+          echo "🛡️ Security note: API Key has been masked in logs"
