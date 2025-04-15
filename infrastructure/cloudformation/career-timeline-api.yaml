@@ -12,6 +12,11 @@ Parameters:
     Default: '*'
     Description: CORS allowed origins (your domain)
 
+  LambdaExecutionRoleArn:
+    Type: String
+    Description: ARN of the IAM role for Lambda execution
+    Default: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CareerTimelineDataRole'
+
 Resources:
   # S3 Bucket for storing the career data
   CareerDataBucket:
@@ -39,7 +44,7 @@ Resources:
       Handler: index.handler
       MemorySize: 128
       Timeout: 10
-      Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/CareerTimelineDataRole'
+      Role: !Ref LambdaExecutionRoleArn
       Environment:
         Variables:
           BUCKET_NAME: !Ref CareerDataBucket
