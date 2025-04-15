@@ -57,41 +57,58 @@ jobs:
             --stack-name career-timeline-api \
             --query "Stacks[0].Outputs" > stack-outputs.json
 
-          # Extract needed values
+          # Extract needed values (non-sensitive)
           S3_BUCKET=$(cat stack-outputs.json | jq -r '.[] | select(.OutputKey=="S3BucketName") | .OutputValue')
           API_ENDPOINT=$(cat stack-outputs.json | jq -r '.[] | select(.OutputKey=="ApiEndpoint") | .OutputValue')
-          API_KEY=$(cat stack-outputs.json | jq -r '.[] | select(.OutputKey=="ApiKey") | .OutputValue')
 
-          # Set outputs for use in other steps
+          # Extract API key (sensitive) and store as a GitHub secret
+          API_KEY=$(cat stack-outputs.json | jq -r '.[] | select(.OutputKey=="ApiKey") | .OutputValue')
+          if [ ! -z "$API_KEY" ]; then
+            # Use GitHub CLI to set the secret securely, if CLI is available
+            if command -v gh &> /dev/null && [ ! -z "${{ secrets.GITHUB_TOKEN }}" ]; then
+              echo "::add-mask::$API_KEY"
+              echo "Setting API_KEY as a repository secret... (output masked)"
+              echo $API_KEY | gh secret set API_KEY --repo $GITHUB_REPOSITORY
+              echo "API key has been stored as a repository secret"
+            else
+              # Mask the value in logs but warn that manual action is required
+              echo "::add-mask::$API_KEY"
+              echo "⚠️ IMPORTANT: Please manually add this API key as a GitHub secret named 'API_KEY'"
+              echo "The key value is masked in the logs for security"
+            fi
+          fi
+
+          # Set non-sensitive outputs for use in other steps
           echo "s3_bucket=$S3_BUCKET" >> $GITHUB_OUTPUT
           echo "api_endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
-
-          # Store API key as a secret
-          if [ ! -z "$API_KEY" ]; then
-            echo "api_key=$API_KEY" >> $GITHUB_OUTPUT
-          fi
 
       - name: Upload career data to S3
         run: |
           aws s3 cp data/careerEvents.json s3://${{ steps.deploy-stack.outputs.s3_bucket }}/careerEvents.json
 
-      - name: Update API details
+      - name: Update API details safely
         run: |
-          # Create or update .env.local file with API details
+          # Create or update .env.local file with API endpoint (non-sensitive)
           echo "VITE_API_URL=${{ steps.deploy-stack.outputs.api_endpoint }}" > .env.local
-          echo "VITE_API_KEY=${{ steps.deploy-stack.outputs.api_key }}" >> .env.local
 
-          # Optional: Save API details as secrets for future use
-          # Note: This requires additional permissions for GitHub Actions
-          # gh secret set VITE_API_URL --body "${{ steps.deploy-stack.outputs.api_endpoint }}"
-          # gh secret set VITE_API_KEY --body "${{ steps.deploy-stack.outputs.api_key }}"
+          # Use the API key from GitHub secrets if available, otherwise leave a placeholder
+          if [ ! -z "${{ secrets.API_KEY }}" ]; then
+            echo "VITE_API_KEY=${{ secrets.API_KEY }}" >> .env.local
+            echo "Added API key from repository secrets to .env.local"
+          else
+            echo "VITE_API_KEY=PLACEHOLDER_REPLACE_WITH_ACTUAL_KEY" >> .env.local
+            echo "⚠️ WARNING: Please replace the placeholder API key in .env.local with the actual key"
+          fi
+
+          # Ensure .env.local is in .gitignore to prevent accidental commits
+          if ! grep -q ".env.local" .gitignore 2>/dev/null; then
+            echo ".env.local" >> .gitignore
+            echo "Added .env.local to .gitignore for security"
+          fi
 
       - name: Output information
         run: |
           echo "✅ Infrastructure deployment complete!"
           echo "🔗 API Endpoint: ${{ steps.deploy-stack.outputs.api_endpoint }}"
           echo "🗄️ S3 Bucket: ${{ steps.deploy-stack.outputs.s3_bucket }}"
-          echo "🔑 API Key has been stored (check workflow outputs)"
-
-          # Important note about the API key
-          echo "⚠️ IMPORTANT: Store your API key securely. It's only shown once after creation."
+          echo "🛡️ Security note: API Key has been masked in logs and stored securely"

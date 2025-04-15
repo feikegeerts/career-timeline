@@ -200,6 +200,7 @@ Resources:
   # API Usage Plan
   ApiUsagePlan:
     Type: AWS::ApiGateway::UsagePlan
+    DependsOn: ApiDeployment
     Properties:
       ApiStages:
         - ApiId: !Ref CareerTimelineApi
