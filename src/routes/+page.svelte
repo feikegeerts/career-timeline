@@ -26,7 +26,7 @@
         },
         mode: 'cors',
         credentials: 'omit',
-        cache: 'no-cache'
+        cache: 'no-cache',
       });
 
       if (!response.ok) {
@@ -38,7 +38,11 @@
       console.log("Successfully loaded career events");
     } catch (err: unknown) {
       console.error("API Error:", err);
-      error = err instanceof Error ? err.message : 'An unknown error occurred fetching career events';
+      if (err instanceof TypeError && err.message.includes('NetworkError')) {
+        error = 'CORS error: Unable to access the API. This might be a cross-origin request issue.';
+      } else {
+        error = err instanceof Error ? err.message : 'An unknown error occurred fetching career events';
+      }
     }
   }
 

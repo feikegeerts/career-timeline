@@ -87,12 +87,24 @@ Resources:
               
               console.log('Successfully retrieved and parsed data');
               
+              // Extract origin from request for proper CORS handling
+              const origin = event.headers && (event.headers.origin || event.headers.Origin);
+              const allowedOrigins = [
+                'https://feikegeerts.nl', 
+                'https://www.feikegeerts.nl'
+              ];
+              
+              // Set CORS origin dynamically if it matches allowed origins, or fall back to configured origin
+              const corsOrigin = (origin && allowedOrigins.includes(origin)) 
+                ? origin 
+                : process.env.CORS_ORIGIN;
+              
               // Return the data with proper headers
               return {
                 statusCode: 200,
                 headers: {
                   'Content-Type': 'application/json',
-                  'Access-Control-Allow-Origin': process.env.CORS_ORIGIN,
+                  'Access-Control-Allow-Origin': corsOrigin,
                   'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key',
                   'Access-Control-Allow-Methods': 'GET,OPTIONS',
                   'Access-Control-Max-Age': '86400'
@@ -101,11 +113,22 @@ Resources:
               };
             } catch (error) {
               console.error('Error:', error);
+              
+              // Extract origin from request for proper CORS handling (also in error case)
+              const origin = event.headers && (event.headers.origin || event.headers.Origin);
+              const allowedOrigins = [
+                'https://feikegeerts.nl', 
+                'https://www.feikegeerts.nl'
+              ];
+              const corsOrigin = (origin && allowedOrigins.includes(origin)) 
+                ? origin 
+                : process.env.CORS_ORIGIN;
+              
               return {
                 statusCode: 500,
                 headers: {
                   'Content-Type': 'application/json',
-                  'Access-Control-Allow-Origin': process.env.CORS_ORIGIN,
+                  'Access-Control-Allow-Origin': corsOrigin,
                   'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key',
                   'Access-Control-Allow-Methods': 'GET,OPTIONS',
                   'Access-Control-Max-Age': '86400'
@@ -152,7 +175,7 @@ Resources:
         IntegrationResponses:
           - StatusCode: '200'
             ResponseParameters:
-              method.response.header.Access-Control-Allow-Origin: "'https://feikegeerts.nl'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key'"
               method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
               method.response.header.Access-Control-Max-Age: "'86400'"
@@ -182,7 +205,7 @@ Resources:
         IntegrationResponses:
           - StatusCode: '200'
             ResponseParameters:
-              method.response.header.Access-Control-Allow-Origin: "'https://feikegeerts.nl'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key'"
               method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
               method.response.header.Access-Control-Max-Age: "'86400'"
