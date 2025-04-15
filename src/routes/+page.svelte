@@ -1,28 +1,42 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import TimelineView from "$lib/components/TimelineView.svelte";
+  import { PUBLIC_API_URL, PUBLIC_API_KEY } from '$env/static/public';
 
   let selectedEventId: number | null = null;
   let isTransitioning = false;
   let timelineViewComponent: TimelineView;
+  let careerEvents = [];
+  let error: string | null = null;
 
-  const careerEvents = [
-    {
-      id: 1,
-      title: "Software Engineer",
-      company: "Tech Company",
-      period: "Jan 2020 - Present",
-      description: "Developing web applications using modern frameworks.",
-    },
-    {
-      id: 2,
-      title: "Intern",
-      company: "Another Tech Company",
-      period: "Jun 2019 - Dec 2019",
-      description: "Assisted in developing internal tools and applications.",
-    },
-    // Add more events as needed
-  ];
+  async function fetchCareerEvents() {
+    try {
+      const response = await fetch(`${PUBLIC_API_URL}`, {
+        headers: {
+          'x-api-key': PUBLIC_API_KEY
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.statusText}`);
+      }
+
+      careerEvents = await response.json();
+    } catch (err) {
+      error = err.message;
+    }
+  }
+
+  onMount(() => {
+    fetchCareerEvents();
+    window.addEventListener("keydown", handleKeydown);
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      window.removeEventListener("keydown", handleKeydown);
+      window.removeEventListener("wheel", handleWheel);
+    };
+  });
+
   function selectEvent(id: number): void {
     selectedEventId = id;
     setTimeout(() => {
@@ -96,23 +110,23 @@
 
   let wheelAccumulator = 0;
   const WHEEL_THRESHOLD = 50;
-  
+
   function handleWheel(event: WheelEvent): void {
     event.preventDefault();
-    
+
     wheelAccumulator += Math.abs(event.deltaY);
-    
+
     if (wheelAccumulator < WHEEL_THRESHOLD) return;
-    
+
     wheelAccumulator = 0;
-    
+
     // Throttle to prevent too rapid navigation
     if (isTransitioning) return;
 
     isTransitioning = true;
     setTimeout(() => {
       isTransitioning = false;
-    }, 500); 
+    }, 500);
 
     if (event.deltaY > 0) {
       goToNextEvent();
@@ -120,15 +134,6 @@
       goToPreviousEvent();
     }
   }
-
-  onMount(() => {
-    window.addEventListener("keydown", handleKeydown);
-    window.addEventListener("wheel", handleWheel, { passive: false });
-    return () => {
-      window.removeEventListener("keydown", handleKeydown);
-      window.removeEventListener("wheel", handleWheel);
-    };
-  });
 </script>
 
 <main>
@@ -136,15 +141,21 @@
     <h1>My Career Timeline</h1>
     <p>A chronological journey through my professional experience</p>
   </header>
-  <TimelineView
-    {careerEvents}
-    {selectedEventId}
-    onSelect={selectEvent}
-    onClose={closeDetailedView}
-    bind:this={timelineViewComponent}
-  />
- 
+  {#if error}
+    <p class="error">Error: {error}</p>
+  {:else if careerEvents.length === 0}
+    <p>Loading...</p>
+  {:else}
+    <TimelineView
+      {careerEvents}
+      {selectedEventId}
+      onSelect={selectEvent}
+      onClose={closeDetailedView}
+      bind:this={timelineViewComponent}
+    />
+  {/if}
 </main>
+
 <style>
   main {
     padding: 2em;
@@ -163,5 +174,10 @@
     color: var(--primary);
     font-size: 2.5em;
     margin-bottom: 0.5em;
+  }
+
+  .error {
+    color: red;
+    text-align: center;
   }
 </style>
