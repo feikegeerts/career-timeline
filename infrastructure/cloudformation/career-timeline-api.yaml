@@ -58,15 +58,24 @@ Resources:
           exports.handler = async (event) => {
             console.log('Event received:', JSON.stringify(event));
             
+            // Get the origin from the request headers
+            const origin = event.headers && (event.headers.origin || event.headers.Origin);
+            console.log(`Request origin: ${origin}`);
+            
+            // Either use the specific origin if it matches our allowed origin, or use '*' for development
+            const accessControlAllowOrigin = origin || '*';
+            console.log(`Using Access-Control-Allow-Origin: ${accessControlAllowOrigin}`);
+            
             // Handle OPTIONS preflight request
             if (event.httpMethod === 'OPTIONS') {
               return {
                 statusCode: 200,
                 headers: {
-                  'Access-Control-Allow-Origin': process.env.CORS_ORIGIN,
+                  'Access-Control-Allow-Origin': accessControlAllowOrigin,
                   'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization',
                   'Access-Control-Allow-Methods': 'GET,OPTIONS',
                   'Access-Control-Max-Age': '86400',
+                  'Vary': 'Origin'
                 }
               };
             }
@@ -90,24 +99,20 @@ Resources:
                 throw new Error('Response body is undefined');
               }
               
-              // For AWS SDK v3, response.Body is a readable stream
               // Convert stream to string
-              let bodyContents = '';
-              
-              // Use the built-in transformToString method instead of custom stream handling
-              bodyContents = await response.Body.transformToString();
+              const bodyContents = await response.Body.transformToString();
               
               // Parse the JSON content
               const careerData = JSON.parse(bodyContents);
               
               console.log('Successfully retrieved and parsed data');
               
-              // Return the data with permissive CORS headers
+              // Return the data with CORS headers
               return {
                 statusCode: 200,
                 headers: {
                   'Content-Type': 'application/json',
-                  'Access-Control-Allow-Origin': process.env.CORS_ORIGIN,
+                  'Access-Control-Allow-Origin': accessControlAllowOrigin,
                   'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization',
                   'Access-Control-Allow-Methods': 'GET,OPTIONS',
                   'Access-Control-Max-Age': '86400',
@@ -122,7 +127,7 @@ Resources:
                 statusCode: 500,
                 headers: {
                   'Content-Type': 'application/json',
-                  'Access-Control-Allow-Origin': process.env.CORS_ORIGIN,
+                  'Access-Control-Allow-Origin': accessControlAllowOrigin,
                   'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization',
                   'Access-Control-Allow-Methods': 'GET,OPTIONS',
                   'Access-Control-Max-Age': '86400',
@@ -167,13 +172,6 @@ Resources:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
         Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CareerDataFunction.Arn}/invocations'
-        IntegrationResponses:
-          - StatusCode: '200'
-            ResponseParameters:
-              method.response.header.Access-Control-Allow-Origin: "'*'"
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization'"
-              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
-              method.response.header.Access-Control-Max-Age: "'86400'"
       MethodResponses:
         - StatusCode: '200'
           ResponseModels:
@@ -193,19 +191,13 @@ Resources:
       HttpMethod: OPTIONS
       AuthorizationType: NONE
       Integration:
-        Type: MOCK
-        PassthroughBehavior: WHEN_NO_MATCH
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
-        IntegrationResponses:
-          - StatusCode: '200'
-            ResponseParameters:
-              method.response.header.Access-Control-Allow-Origin: "'*'"
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization'"
-              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
-              method.response.header.Access-Control-Max-Age: "'86400'"
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CareerDataFunction.Arn}/invocations'
       MethodResponses:
         - StatusCode: '200'
+          ResponseModels:
+            application/json: 'Empty'
           ResponseParameters:
             method.response.header.Access-Control-Allow-Origin: true
             method.response.header.Access-Control-Allow-Headers: true
