@@ -64,7 +64,7 @@ Resources:
                 statusCode: 200,
                 headers: {
                   'Access-Control-Allow-Origin': process.env.CORS_ORIGIN,
-                  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key',
+                  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization',
                   'Access-Control-Allow-Methods': 'GET,OPTIONS',
                   'Access-Control-Max-Age': '86400',
                 }
@@ -108,7 +108,7 @@ Resources:
                 headers: {
                   'Content-Type': 'application/json',
                   'Access-Control-Allow-Origin': process.env.CORS_ORIGIN,
-                  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key',
+                  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization',
                   'Access-Control-Allow-Methods': 'GET,OPTIONS',
                   'Access-Control-Max-Age': '86400',
                   'Vary': 'Origin'
@@ -123,7 +123,7 @@ Resources:
                 headers: {
                   'Content-Type': 'application/json',
                   'Access-Control-Allow-Origin': process.env.CORS_ORIGIN,
-                  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key',
+                  'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization',
                   'Access-Control-Allow-Methods': 'GET,OPTIONS',
                   'Access-Control-Max-Age': '86400',
                   'Vary': 'Origin'
@@ -162,7 +162,7 @@ Resources:
       ResourceId: !Ref CareerEventsResource
       HttpMethod: GET
       AuthorizationType: NONE
-      ApiKeyRequired: true
+      ApiKeyRequired: false
       Integration:
         Type: AWS_PROXY
         IntegrationHttpMethod: POST
@@ -171,7 +171,7 @@ Resources:
           - StatusCode: '200'
             ResponseParameters:
               method.response.header.Access-Control-Allow-Origin: "'*'"
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization'"
               method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
               method.response.header.Access-Control-Max-Age: "'86400'"
       MethodResponses:
@@ -201,7 +201,7 @@ Resources:
           - StatusCode: '200'
             ResponseParameters:
               method.response.header.Access-Control-Allow-Origin: "'*'"
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-api-key'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization'"
               method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
               method.response.header.Access-Control-Max-Age: "'86400'"
       MethodResponses:
@@ -247,30 +247,10 @@ Resources:
         RateLimit: 10
         BurstLimit: 20
 
-  # API Key
-  ApiKey:
-    Type: AWS::ApiGateway::ApiKey
-    Properties:
-      Name: CareerTimelineApiKey
-      Description: API Key for Career Timeline API
-      Enabled: true
-
-  # API Key Usage Plan
-  ApiKeyUsagePlan:
-    Type: AWS::ApiGateway::UsagePlanKey
-    Properties:
-      KeyId: !Ref ApiKey
-      KeyType: API_KEY
-      UsagePlanId: !Ref ApiUsagePlan
-
 Outputs:
   ApiEndpoint:
     Description: API Gateway endpoint URL
     Value: !Sub 'https://${CareerTimelineApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiStageName}/career-events'
-
-  ApiKey:
-    Description: API Key (will only be shown once)
-    Value: !Ref ApiKey
 
   S3BucketName:
     Description: S3 Bucket for storing career data

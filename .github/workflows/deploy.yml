@@ -15,12 +15,11 @@ jobs:
           cache: yarn
       - run: yarn install --frozen-lockfile
 
-      # Pass API secrets to the build process
+      # Pass API URL to the build process
       - name: Build
         run: yarn build
         env:
           VITE_PUBLIC_API_URL: ${{ secrets.API_URL }}
-          VITE_PUBLIC_API_KEY: ${{ secrets.API_KEY }}
 
       # Enable use of custom domain
       - name: Configure custom domain

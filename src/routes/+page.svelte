@@ -10,7 +10,6 @@
   let error: string | null = null;
 
   const apiUrl = import.meta.env.VITE_PUBLIC_API_URL;
-  const apiKey = import.meta.env.VITE_PUBLIC_API_KEY;
   const isDev = import.meta.env.DEV;
 
   async function fetchCareerEvents() {
@@ -20,7 +19,6 @@
       
       const response = await fetch(fetchUrl, {
         headers: {
-          'x-api-key': apiKey,
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
