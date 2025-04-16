@@ -1,12 +1,11 @@
 name: Deploy AWS Infrastructure
 
 on:
-  workflow_dispatch: # Allows manual triggering
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'infrastructure/cloudformation/**'
-      - 'data/careerEvents.json'
       - '.github/workflows/deploy-infrastructure.yml'
 
 jobs:
@@ -118,12 +117,6 @@ jobs:
           # Set non-sensitive outputs for use in other steps
           echo "s3_bucket=$S3_BUCKET" >> $GITHUB_OUTPUT
           echo "api_endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
-
-      - name: Upload career data to S3
-        run: |
-          echo "Uploading career data to S3 bucket ${{ steps.deploy-stack.outputs.s3_bucket }}..."
-          aws s3 cp data/careerEvents.json s3://${{ steps.deploy-stack.outputs.s3_bucket }}/careerEvents.json
-          echo "✅ Data upload complete!"
 
       - name: Output information
         run: |

@@ -21,3 +21,7 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Personal data - don't commit to GitHub
+/data/careerEvents.json
+/data/personal/

@@ -56,12 +56,30 @@ aws cloudformation delete-stack \
   --stack-name career-timeline-api
 ```
 
-## After Deployment
+### Personal Data Workflow
 
-1. Upload your `careerEvents.json` to the created S3 bucket:
+1. The `careerEvents.json` file should be kept in the `data/` directory but is excluded from git via `.gitignore`
+2. Use the local upload script to directly update the S3 bucket with the data file
+
+### Uploading Personal Data to S3
+
+There is a dedicated script to upload the career data to S3 without going through GitHub:
 
 ```bash
-aws s3 cp ../../data/careerEvents.json s3://YOUR_BUCKET_NAME/
+# Install dependencies if you haven't already
+yarn install
+
+# Upload your personal data to S3
+yarn upload-data
+
+# If you need to specify a custom AWS profile
+yarn upload-data -- --profile your-profile-name
+
+# Additional options
+yarn upload-data -- --help
 ```
 
-2. Update your application's environment variables with the API endpoint and key.
+## After Deployment
+
+1. Update your application's environment variables with the API endpoint and key.
+2. Upload your private `careerEvents.json` using the upload script described above.
