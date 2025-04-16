@@ -15,11 +15,30 @@ jobs:
           cache: yarn
       - run: yarn install --frozen-lockfile
 
+      # Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Fetch API URL from CloudFormation stack outputs
+      - name: Get API URL from CloudFormation
+        id: get-api-url
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name career-timeline-api \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiEndpoint'].OutputValue" \
+            --output text)
+          echo "API_URL=$API_URL" >> $GITHUB_ENV
+          echo "Retrieved API URL: $API_URL"
+
       # Pass API URL to the build process
       - name: Build
         run: yarn build
         env:
-          VITE_PUBLIC_API_URL: ${{ secrets.API_URL }}
+          VITE_PUBLIC_API_URL: ${{ env.API_URL }}
 
       # Enable use of custom domain
       - name: Configure custom domain
